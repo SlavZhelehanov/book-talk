@@ -5,17 +5,20 @@ const createEdit = require('../util/createEdit');
 
 // DETAILS
 router.get('/details/:id', async (req, res) => {
-    let _id;
-    req.session.user ? _id = req.session.user._id : _id = null;
+    let _id = null, isOwner = false, isWished = false;
+
+    if (req.session.user) _id = req.session.user._id;
+
     const id = req.params.id;
 
     try {
         const book = await Book.findById(id).lean();
 
         if (!book) return res.render('home/404', { isAuth: req.session.isAuth, _id });
-
-        const isOwner = req.session.user._id.equals(book.owner);
-        const isWished = book.wishingList.filter(f => f.equals(req.session.user._id)).length > 0;
+        if (_id) {
+            isOwner = req.session.user._id.equals(book.owner);
+            isWished = book.wishingList.filter(f => f.equals(req.session.user._id)).length > 0;
+        }
 
         return res.render('book/details', { isAuth: req.session.isAuth, _id, book, isOwner, isWished });
     } catch (detailsErr) {
@@ -31,7 +34,7 @@ router.get('/wish/:id', isUser, async (req, res) => {
 
     try {
         const book = await Book.findById(id).lean();
-        
+
         if (!book) return res.render('home/404', { isAuth: req.session.isAuth, _id });
         if (book.owner.equals(req.session.user._id)) return res.render('home/404', { isAuth: req.session.isAuth, _id });
 
@@ -45,19 +48,19 @@ router.get('/wish/:id', isUser, async (req, res) => {
 });
 
 // CREATE REVIEW
-router.get('/create', isUser, (req, res) => { 
+router.get('/create', isUser, (req, res) => {
     let _id;
     req.session.user ? _id = req.session.user._id : _id = null;
-    return res.render('book/create', { isAuth: req.session.isAuth, _id }) 
+    return res.render('book/create', { isAuth: req.session.isAuth, _id })
 });
 
 router.post('/create', isUser, async (req, res) => {
     let _id;
     req.session.user ? _id = req.session.user._id : _id = null;
-    let { title, author, genre, stars, image, review } = req.body; 
+    let { title, author, genre, stars, image, review } = req.body;
     stars = +stars; title = title.trim(); author = author.trim(); genre = genre.trim(); image = image.trim(); review = review.trim();
     let old = { title, author, genre, stars, image, review };
-    
+
     const errors = createEdit(title, author, genre, stars, image, review);
 
     if (0 < errors.length) return res.render('book/create', { isAuth: req.session.isAuth, _id, errors, old });
@@ -110,7 +113,7 @@ router.get('/edit/:id', isUser, async (req, res) => {
 router.put('/edit/:id', isUser, async (req, res) => {
     let _id;
     req.session.user ? _id = req.session.user._id : _id = null;
-    let { title, author, genre, stars, image, review } = req.body; 
+    let { title, author, genre, stars, image, review } = req.body;
     stars = +stars; title = title.trim(); author = author.trim(); genre = genre.trim(); image = image.trim(); review = review.trim();
     let old = { title, author, genre, stars, image, review }, options = {};
     const errors = createEdit(title, author, genre, stars, image, review), id = req.params.id;
